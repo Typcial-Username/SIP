@@ -4,6 +4,7 @@
  * Directional Alarm Clock SIP Project
 */
 
+#pragma region Imports
 #include <M5Core2.h>
 // #include <M5Unified.h>
 
@@ -17,10 +18,16 @@
 #include <sd_defines.h>
 #include <sd_diskio.h>
 
+#include <SPI.h>
+
 #include <FS.h>
 #include <FSImpl.h>
 #include <vfs_api.h>
 
+#include <SD.h>
+#pragma endregion
+
+#pragma region Globals
 #define SCREEN_W     320
 #define SCREEN_H     240
 
@@ -29,11 +36,99 @@
 #define iconHeight   SCREEN_H - 25
 #define bottom       SCREEN_H - 10
 
-uint32_t DRAW_BUF_SIZE (SCREEN_W * 40 * (LV_COLOR_DEPTH / 8));
+uint32_t DRAW_BUF_SIZE = SCREEN_W * 40 * (LV_COLOR_DEPTH / 8);
 uint32_t *draw_buf;
 
 lv_display_t *display;
 lv_indev_t *indev;
+
+static constexpr const gpio_num_t SDCARD_CSPIN = GPIO_NUM_4;
+#pragma endregion
+
+File root;
+
+void printDirectory(File, int);
+uint32_t my_timer_function();
+void my_disp_flush(lv_display_t*, const lv_area_t*, uint8_t*);
+void my_touchpad_read(lv_indev_t*, lv_indev_data_t*);
+void file_menu(String);
+
+void setup() {
+  Serial.begin(115200);
+   
+  while (!Serial);
+  
+  Serial.print("Initializing SD card...");
+  if (!SD.begin(SDCARD_CSPIN, SPI, 25000000)) {
+    Serial.println("initialization failed. Things to check:");
+    Serial.println("1. is a card inserted?");
+    Serial.println("2. is your wiring correct?");
+    Serial.println("3. did you change the chipSelect pin to match your shield or module?");
+    Serial.println("Note: press reset button on the board and reopen this Serial Monitor after fixing your issue!");
+    while (true);
+  }
+  Serial.println("done.");
+
+  Serial.print("Initializing M5...");
+  M5.begin();
+  Serial.println("done.");
+  Serial.print("Initializing LVGL...");
+  lv_init();
+  Serial.println("done.");
+
+  Serial.println("Initialization Complete!");
+
+  lv_tick_set_cb(my_timer_function);
+ 
+#if LV_USE_LOG != 0
+    lv_log_register_print_cb(my_print);
+#endif
+ 
+  display = lv_display_create(SCREEN_W, SCREEN_H);
+  lv_display_set_flush_cb(display, my_disp_flush);
+
+  draw_buf = (uint32_t*)heap_caps_malloc(DRAW_BUF_SIZE, MALLOC_CAP_SPIRAM);
+  if (!draw_buf) {
+      Serial.println("Draw buffer alloc failed.");
+      while (1);
+  }
+  lv_display_set_buffers(display, draw_buf, nullptr, DRAW_BUF_SIZE, LV_DISPLAY_RENDER_MODE_PARTIAL);
+
+  lv_indev_t *indev = lv_indev_create();
+  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(indev, my_touchpad_read);
+
+  M5.Lcd.drawRect(5, iconHeight - 10, SCREEN_W - 5, -(SCREEN_H - iconHeight) + 10, RED);
+  file_menu("/");
+
+  root = SD.open("/");
+
+  printDirectory(root, 0);
+}
+
+void printDirectory(File dir, int numTabs = 0) {
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
 
 void enter_icon(int x, int y, int w, int h, int color)
 {
@@ -114,41 +209,12 @@ void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
 void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     TouchPoint_t tp = M5.Touch.getPressPoint();
     if (tp.x >= 0 && tp.y >= 0) {
-        data->state = LV_INDEV_STATE_PRESSED;
-        data->point.x = tp.x;
-        data->point.y = tp.y;
+      data->state = LV_INDEV_STATE_PRESSED;
+      data->point.x = tp.x;
+      data->point.y = tp.y;
     } else {
-        data->state = LV_INDEV_STATE_RELEASED;
+      data->state = LV_INDEV_STATE_RELEASED;
     }
-}
-
-void setup() {
-  Serial.begin(115200);
-  M5.begin();
-  lv_init();
-
-  lv_tick_set_cb(my_timer_function);
- 
-#if LV_USE_LOG != 0
-    lv_log_register_print_cb(my_print);
-#endif
- 
-  lv_display_t *disp = lv_display_create(SCREEN_W, SCREEN_H);
-  lv_display_set_flush_cb(disp, my_disp_flush);
-
-  draw_buf = (uint32_t*)heap_caps_malloc(DRAW_BUF_SIZE, MALLOC_CAP_SPIRAM);
-  if (!draw_buf) {
-      Serial.println("Draw buffer alloc failed.");
-      while (1);
-  }
-  lv_display_set_buffers(disp, draw_buf, nullptr, DRAW_BUF_SIZE, LV_DISPLAY_RENDER_MODE_PARTIAL);
-
-  lv_indev_t *indev = lv_indev_create();
-  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-  lv_indev_set_read_cb(indev, my_touchpad_read);
-
-  M5.Lcd.drawRect(5, iconHeight - 10, SCREEN_W - 5, -(SCREEN_H - iconHeight) + 10, RED);
-  file_menu("/");
 }
 
 void loop() {
