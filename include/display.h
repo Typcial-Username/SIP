@@ -9,8 +9,8 @@
 #define SCREEN_H     240
 
 #define ICON_HEIGHT   SCREEN_H - 25
-#define BOTTOM       SCREEN_H - 10
-#define BTN_GAP      110
+#define BOTTOM        SCREEN_H - 10
+#define BTN_GAP       110
 
 // uint32_t DRAW_BUF_SIZE = SCREEN_W * 40 * (LV_COLOR_DEPTH / 8);
 // uint32_t *draw_buf;
