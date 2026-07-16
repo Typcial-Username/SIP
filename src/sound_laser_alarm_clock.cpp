@@ -14,6 +14,7 @@
 #include "sd_browser.h"
 #include "secrets.h"
 #include "time.h"
+#include "audio.h"
 #pragma endregion
 
 File ROOT;
@@ -157,6 +158,7 @@ void setup() {
 
    // Connect to WiFi
   Serial.print("Connecting to WiFi...");
+  M5.Lcd.println("Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -169,6 +171,8 @@ void setup() {
   Serial.print("Connected to WiFi. IP Address: ");
   Serial.println(localIP);
   Serial.println();
+  M5.Lcd.println("Connected with " + localIP);
+  M5.Lcd.clearDisplay();
 
   server.on("/", HTTP_GET, handleRoot);
   server.begin();
@@ -190,11 +194,11 @@ void setup() {
   uint8_t* buf = (uint8_t*)malloc(size);
   blue.read(buf, size);
 
-  
-
   ROOT = SD.open("/");
 
   printDirectory(ROOT, 0);
+  cosine();
+
 }
 
 void loop() {
@@ -224,7 +228,6 @@ void loop() {
       M5.Lcd.setTextSize(4);
       M5.Lcd.drawString(time, x, y);
 
-      Serial.println(time);
       if (time == "2:32:00 PM") {
       M5.Speaker.setVolume(100);
         playSdWav("/Mr.Blue_Sky.wav");
