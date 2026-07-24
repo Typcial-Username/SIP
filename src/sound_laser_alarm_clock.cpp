@@ -189,15 +189,18 @@ void setup() {
   M5.Lcd.drawRect(5, ICON_HEIGHT - 10, SCREEN_W - 5, -(SCREEN_H - ICON_HEIGHT) + 10, RED);
   // file_menu("/");
 
-  File blue = SD.open("/Mr.Blue_Sky.wav");
-  size_t size = blue.size();
-  uint8_t* buf = (uint8_t*)malloc(size);
-  blue.read(buf, size);
+  // File blue = SD.open("/Mr.Blue_Sky.wav");
+  // size_t size = blue.size();
+  // uint8_t* buf = (uint8_t*)malloc(size);
+  // blue.read(buf, size);
 
   ROOT = SD.open("/");
 
   printDirectory(ROOT, 0);
-  cosine();
+  // cosine();
+  // stand_tall__my_son-modulated.uaf, mr_blue_sky-modulated.uaf, he_s_a_pirate-modulated.uaf
+
+  startAlarmPlayback("/stand_tall__my_son-modulated.uaf");
 
 }
 

@@ -25,7 +25,7 @@ void printDirectory(File dir, int numTabs = 0) {
 }
 
 void initSD() {
-  if (!SD.begin(SDCARD_CSPIN, SPI, 4000000)) {
+  if (!SD.begin(SDCARD_CSPIN, SPI, 16000000)) {
     Serial.println("initialization failed. Things to check:");
     Serial.println("1. is a card inserted?");
     Serial.println("2. is your wiring correct?");
